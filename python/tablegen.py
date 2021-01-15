@@ -9,6 +9,9 @@
 
 from textwrap import wrap
 
+# sample rate of Arduino, 16MHz / 510 for phase correct PWM
+refosc = 31372
+
 
 # calculate polyblep table
 def blep(t):
@@ -30,8 +33,9 @@ def wraplist(csl):
 
 
 # define a couple of blank arrays to hold the samples
-blep_tbl = []       # list of values of precalculated polyblep
-recip_tbl = []    # list of values for reciprocal table
+blep_tbl = []   # list of values of precalculated polyblep
+recip_tbl = []  # list of values for reciprocal table
+pitch_tbl = []  # list of values for the pitch table
 
 s_len = 256  # number of values to compute
 
@@ -40,6 +44,19 @@ s_len = 256  # number of values to compute
 for i in range(0, s_len):
     blep_tbl.append(blep(i))
     recip_tbl.append(int(255/(i+1)))
+
+# compute the pitch table values
+# only going to generate notes from C0 to C8
+# the ADC can actually only realistically attain 64 notes in the scale
+# there might be a tuning offset applied to shift octave though
+for i in range(0, 97):
+    note = i-36     # table 0 = C0
+    freq = 130.81 * 2 ** (0.083334 * note)
+
+    # turn this into a 32-bit int
+    theta = int((2**32) * freq / refosc)
+
+    pitch_tbl.append(theta)
 
 # begin writing them out
 f = open("tables.h", "w")
@@ -65,6 +82,12 @@ print("};\n", file=f)
 print("// precalculated reciprocal table", file=f)
 print("PROGMEM const unsigned char recip[] = {", file=f)
 print(*wraplist(recip_tbl), sep="\n", file=f)
+print("};\n", file=f)
+
+# pitch table
+print("// precalculated pitch theta table", file=f)
+print("PROGMEM const unsigned long pitch[] = {", file=f)
+print(*wraplist(pitch_tbl), sep="\n", file=f)
 print("};\n", file=f)
 
 f.close()

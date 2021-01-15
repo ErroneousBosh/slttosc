@@ -39,8 +39,14 @@ void setup() {
 }
 
 void loop() {
-  adc = 16 + analogRead(0)*4; // value from 16Hz to ~4100Hz
-  theta = pow(2,32) * adc / ref;  // calculate phase shift per sample
+  adc = analogRead(0);
+  adc -= 10; // offset is about 10, lowest note is 204
+  adc = adc * (16/18.4167); // scale the ADC value correctly (will need adjusted per board!)
+
+  // at this point we actually need to read the value and interpolate, to get the sixteen "6-cents" in between
+  // but it actually sounds okay when driven by my TD3
+  theta = pgm_read_dword_near(pitch + (adc>>4));
+  
 }
 
 ISR(TIMER2_OVF_vect) {
